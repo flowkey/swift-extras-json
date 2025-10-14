@@ -11,7 +11,7 @@ public enum JSONError: Swift.Error, Equatable {
     case numberWithLeadingZero(index: Int)
 }
 
-public enum JSONValue {
+public enum JSONValue: Sendable {
     case string(String)
     case number(String)
     case bool(Bool)

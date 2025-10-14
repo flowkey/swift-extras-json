@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 enum JSONFuture {
     case value(JSONValue)
     case nestedArray(JSONArray)
@@ -179,3 +179,4 @@ extension JSONEncoderImpl: Encoder {
         return JSONSingleValueEncodingContainer(impl: self, codingPath: self.codingPath)
     }
 }
+#endif

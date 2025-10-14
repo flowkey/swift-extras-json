@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct JSONSingleValueEncodingContainer: SingleValueEncodingContainer {
     let impl: JSONEncoderImpl
     let codingPath: [CodingKey]
@@ -107,3 +107,4 @@ extension JSONSingleValueEncodingContainer {
         self.impl.singleValue = .number(value.description)
     }
 }
+#endif

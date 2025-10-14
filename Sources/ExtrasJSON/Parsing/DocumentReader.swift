@@ -41,9 +41,10 @@
         case expectedLowSurrogateUTF8SequenceAfterHighSurrogate(index: Int)
         case unexpectedEscapedCharacter(ascii: UInt8, index: Int)
         case couldNotCreateUnicodeScalarFromUInt32(index: Int, unicodeScalarValue: UInt32)
+        case jsonError(JSONError)
     }
 
-    @inlinable mutating func readUTF8StringTillNextUnescapedQuote() throws -> String {
+    @inlinable mutating func readUTF8StringTillNextUnescapedQuote() throws(JSONError) -> String {
         precondition(self.value == UInt8(ascii: "\""), "Expected to have read a quote character last")
         var stringStartIndex = self.index + 1
         var output: String?
@@ -66,7 +67,7 @@
                 // through U+001F).
                 var string = output ?? ""
                 string += self.makeStringFast(self.array[stringStartIndex ... index])
-                throw JSONError.unescapedControlCharacterInString(ascii: byte, in: string, index: index)
+                throw .unescapedControlCharacterInString(ascii: byte, in: string, index: index)
 
             case UInt8(ascii: "\\"):
                 if output != nil {
@@ -79,17 +80,20 @@
                     let (escaped, newIndex) = try parseEscapeSequence()
                     output! += escaped
                     stringStartIndex = newIndex + 1
-                } catch EscapedSequenceError.unexpectedEscapedCharacter(let ascii, let failureIndex) {
+                } catch (let error) {
                     output! += makeStringFast(array[index ... self.index])
-                    throw JSONError.unexpectedEscapedCharacter(ascii: ascii, in: output!, index: failureIndex)
-                } catch EscapedSequenceError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(let failureIndex) {
-                    output! += makeStringFast(array[index ... self.index])
-                    throw JSONError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(in: output!, index: failureIndex)
-                } catch EscapedSequenceError.couldNotCreateUnicodeScalarFromUInt32(let failureIndex, let unicodeScalarValue) {
-                    output! += makeStringFast(array[index ... self.index])
-                    throw JSONError.couldNotCreateUnicodeScalarFromUInt32(
-                        in: output!, index: failureIndex, unicodeScalarValue: unicodeScalarValue
-                    )
+                    switch error {
+                    case let .unexpectedEscapedCharacter(ascii, failureIndex):
+                        throw .unexpectedEscapedCharacter(ascii: ascii, in: output!, index: failureIndex)
+                    case let .expectedLowSurrogateUTF8SequenceAfterHighSurrogate(failureIndex):
+                        throw .expectedLowSurrogateUTF8SequenceAfterHighSurrogate(in: output!, index: failureIndex)
+                    case let .couldNotCreateUnicodeScalarFromUInt32(failureIndex, unicodeScalarValue):
+                        throw .couldNotCreateUnicodeScalarFromUInt32(
+                            in: output!, index: failureIndex, unicodeScalarValue: unicodeScalarValue
+                        )
+                    case let .jsonError(jsonError):
+                        throw jsonError
+                    }
                 }
 
             default:
@@ -97,7 +101,7 @@
             }
         }
 
-        throw JSONError.unexpectedEndOfFile
+        throw .unexpectedEndOfFile
     }
 
     // can be removed as soon https://bugs.swift.org/browse/SR-12126 and
@@ -111,9 +115,9 @@
         }
     }
 
-    @inlinable mutating func parseEscapeSequence() throws -> (String, Int) {
+    @inlinable mutating func parseEscapeSequence() throws(EscapedSequenceError) -> (String, Int) {
         guard let (byte, index) = read() else {
-            throw JSONError.unexpectedEndOfFile
+            throw .jsonError(.unexpectedEndOfFile)
         }
 
         switch byte {
@@ -129,11 +133,11 @@
             let (character, newIndex) = try parseUnicodeSequence()
             return (String(character), newIndex)
         default:
-            throw EscapedSequenceError.unexpectedEscapedCharacter(ascii: byte, index: index)
+            throw .unexpectedEscapedCharacter(ascii: byte, index: index)
         }
     }
 
-    @inlinable mutating func parseUnicodeSequence() throws -> (Unicode.Scalar, Int) {
+    @inlinable mutating func parseUnicodeSequence() throws(EscapedSequenceError) -> (Unicode.Scalar, Int) {
         // we build this for utf8 only for now.
         let bitPattern = try parseUnicodeHexSequence()
 
@@ -145,11 +149,11 @@
             guard let (escapeChar, _) = read(),
                   let (uChar, _) = read()
             else {
-                throw JSONError.unexpectedEndOfFile
+                throw .jsonError(.unexpectedEndOfFile)
             }
 
             guard escapeChar == UInt8(ascii: #"\"#), uChar == UInt8(ascii: "u") else {
-                throw EscapedSequenceError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(index: self.index)
+                throw .expectedLowSurrogateUTF8SequenceAfterHighSurrogate(index: self.index)
             }
 
             let lowSurrogateBitBattern = try parseUnicodeHexSequence()
@@ -157,14 +161,14 @@
             guard isSecondByteLowSurrogate == 0xDC00 else {
                 // we are in an escaped sequence. for this reason an output string must have
                 // been initialized
-                throw EscapedSequenceError.expectedLowSurrogateUTF8SequenceAfterHighSurrogate(index: self.index)
+                throw .expectedLowSurrogateUTF8SequenceAfterHighSurrogate(index: self.index)
             }
 
             let highValue = UInt32(highSurrogateBitPattern - 0xD800) * 0x400
             let lowValue = UInt32(lowSurrogateBitBattern - 0xDC00)
             let unicodeValue = highValue + lowValue + 0x10000
             guard let unicode = Unicode.Scalar(unicodeValue) else {
-                throw EscapedSequenceError.couldNotCreateUnicodeScalarFromUInt32(
+                throw .couldNotCreateUnicodeScalarFromUInt32(
                     index: self.index, unicodeScalarValue: unicodeValue
                 )
             }
@@ -172,14 +176,14 @@
         }
 
         guard let unicode = Unicode.Scalar(bitPattern) else {
-            throw EscapedSequenceError.couldNotCreateUnicodeScalarFromUInt32(
+            throw .couldNotCreateUnicodeScalarFromUInt32(
                 index: self.index, unicodeScalarValue: UInt32(bitPattern)
             )
         }
         return (unicode, self.index)
     }
 
-    @inlinable mutating func parseUnicodeHexSequence() throws -> UInt16 {
+    @inlinable mutating func parseUnicodeHexSequence() throws(EscapedSequenceError) -> UInt16 {
         // As stated in RFC-8259 an escaped unicode character is 4 HEXDIGITs long
         // https://tools.ietf.org/html/rfc8259#section-7
         guard let (firstHex, startIndex) = read(),
@@ -187,7 +191,7 @@
               let (thirdHex, _) = read(),
               let (forthHex, _) = read()
         else {
-            throw JSONError.unexpectedEndOfFile
+            throw .jsonError(.unexpectedEndOfFile)
         }
 
         guard let first = DocumentReader.hexAsciiTo4Bits(firstHex),
@@ -196,7 +200,7 @@
               let forth = DocumentReader.hexAsciiTo4Bits(forthHex)
         else {
             let hexString = String(decoding: [firstHex, secondHex, thirdHex, forthHex], as: Unicode.UTF8.self)
-            throw JSONError.invalidHexDigitSequence(hexString, index: startIndex)
+            throw .jsonError(.invalidHexDigitSequence(hexString, index: startIndex))
         }
         let firstByte = UInt16(first) << 4 | UInt16(second)
         let secondByte = UInt16(third) << 4 | UInt16(forth)

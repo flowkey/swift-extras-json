@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct JSONKeyedEncodingContainer<K: CodingKey>: KeyedEncodingContainerProtocol {
     typealias Key = K
 
@@ -141,3 +141,4 @@ extension JSONKeyedEncodingContainer {
         self.object.set(.number(value.description), for: key.stringValue)
     }
 }
+#endif

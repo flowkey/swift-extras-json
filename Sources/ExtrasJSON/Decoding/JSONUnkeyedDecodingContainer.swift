@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct JSONUnkeyedDecodingContainer: UnkeyedDecodingContainer {
     let impl: JSONDecoderImpl
     let codingPath: [CodingKey]
@@ -205,3 +205,4 @@ extension JSONUnkeyedDecodingContainer {
         return float
     }
 }
+#endif

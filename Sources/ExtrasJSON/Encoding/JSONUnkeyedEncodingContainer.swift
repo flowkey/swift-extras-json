@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct JSONUnkeyedEncodingContainer: UnkeyedEncodingContainer {
     let impl: JSONEncoderImpl
     let array: JSONArray
@@ -136,3 +136,4 @@ extension JSONUnkeyedEncodingContainer {
         self.array.append(.number(value.description))
     }
 }
+#endif

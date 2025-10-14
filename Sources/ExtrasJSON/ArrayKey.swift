@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct ArrayKey: CodingKey, Equatable {
     init(index: Int) {
         self.intValue = index
@@ -24,3 +24,4 @@ func == (lhs: ArrayKey, rhs: ArrayKey) -> Bool {
     precondition(rhs.intValue != nil)
     return lhs.intValue == rhs.intValue
 }
+#endif

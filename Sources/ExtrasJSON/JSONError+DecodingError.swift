@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 extension JSONError {
     @inlinable var decodingError: DecodingError {
         switch self {
@@ -66,3 +66,4 @@ extension JSONError {
         }
     }
 }
+#endif

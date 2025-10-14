@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 struct JSONSingleValueDecodingContainter: SingleValueDecodingContainer {
     let impl: JSONDecoderImpl
     let value: JSONValue
@@ -121,3 +121,4 @@ extension JSONSingleValueDecodingContainter {
         return floatingPoint
     }
 }
+#endif

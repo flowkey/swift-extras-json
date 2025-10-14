@@ -1,4 +1,4 @@
-
+#if !hasFeature(Embedded)
 public struct XJSONDecoder {
     public var userInfo: [CodingUserInfoKey: Any] = [:]
 
@@ -80,3 +80,4 @@ extension JSONDecoderImpl: Decoder {
         )
     }
 }
+#endif

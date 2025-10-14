@@ -1,3 +1,4 @@
+#if !hasFeature(Embedded)
 struct JSONKeyedDecodingContainer<K: CodingKey>: KeyedDecodingContainerProtocol {
     typealias Key = K
 
@@ -188,3 +189,4 @@ extension JSONKeyedDecodingContainer {
         return floatingPoint
     }
 }
+#endif
