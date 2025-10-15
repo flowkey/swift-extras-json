@@ -25,17 +25,11 @@ extension JSONValue {
     public func appendBytes(to bytes: inout [UInt8]) {
         switch self {
         case .null:
-            bytes.append(contentsOf: [
-                UInt8(ascii: "n"), UInt8(ascii: "u"), UInt8(ascii: "l"), UInt8(ascii: "l"),
-            ])
+            StaticString("null").withUTF8Buffer({ bytes.append(contentsOf: $0) })
         case .bool(true):
-            bytes.append(contentsOf: [
-                UInt8(ascii: "t"), UInt8(ascii: "r"), UInt8(ascii: "u"), UInt8(ascii: "e"),
-            ])
+            StaticString("true").withUTF8Buffer({ bytes.append(contentsOf: $0) })
         case .bool(false):
-            bytes.append(contentsOf: [
-                UInt8(ascii: "f"), UInt8(ascii: "a"), UInt8(ascii: "l"), UInt8(ascii: "s"), UInt8(ascii: "e"),
-            ])
+            StaticString("false").withUTF8Buffer({ bytes.append(contentsOf: $0) })
         case .string(let string):
             self.encodeString(string, to: &bytes)
         case .number(let string):
