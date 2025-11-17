@@ -450,6 +450,9 @@ internal func _float32ToStringImpl(
   var buffer = unsafe MutableSpan<UTF8.CodeUnit>(
     _unsafeStart: textBuffer,
     count: Int(bufferLength))
+  for i in buffer.indices {
+    buffer[i] = 0x30 // "0"
+  }
   let textRange = _Float32ToASCII(value: value, buffer: &buffer)
   let textLength = textRange.upperBound - textRange.lowerBound
 
@@ -698,6 +701,9 @@ internal func _float64ToStringImpl(
   var buffer = unsafe MutableSpan<UTF8.CodeUnit>(
     _unsafeStart: textBuffer,
     count: Int(bufferLength))
+  for i in buffer.indices {
+    buffer[i] = 0x30 // "0"
+  }
   let textRange = _Float64ToASCII(value: value, buffer: &buffer)
   let textLength = textRange.upperBound - textRange.lowerBound
 
